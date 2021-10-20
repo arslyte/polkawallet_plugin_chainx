@@ -1,4 +1,4 @@
-import { keyExtractSuri, mnemonicGenerate, cryptoWaitReady, signatureVerify } from "@polkadot/util-crypto"
+import { keyExtractSuri, mnemonicGenerate, cryptoWaitReady, signatureVerify, encodeAddress,mnemonicValidate } from "@polkadot/util-crypto"
 import { hexToU8a, u8aToHex, isHex, stringToU8a } from "@polkadot/util"
 import BN from "bn.js"
 import { parseQrCode, getSigner, makeTx, getSubmittable } from "../utils/QrSigner"
@@ -14,68 +14,122 @@ import { DispatchError } from "@polkadot/types/interfaces"
 import metaDataMap from "../constants/networkMetadata";
 import { TypeRegistry } from "@polkadot/types";
 import { Metadata } from "@polkadot/metadata";
+import account from "./account";
 let keyring = new Keyring({ ss58Format: 44, type: "sr25519" })
 
 /**
  * Generate a set of new mnemonic.
  */
-async function gen() {
-  const mnemonic = mnemonicGenerate()
+async function gen(mnemonic: string, ss58Format: number, cryptoType: KeypairType, derivePath: string) {
+  const key = mnemonic || mnemonicGenerate();
+  if (!mnemonicValidate(key)) return null;
+
+  const keyPair = keyring.addFromMnemonic(key + (derivePath || ""), {}, cryptoType || "sr25519");
+  const address = encodeAddress(keyPair.publicKey, ss58Format || 0);
+  const icons = await account.genIcons([address]);
   return {
-    mnemonic,
+    mnemonic: key,
+    address,
+    svg: icons[0][1],
+  };
+}
+
+/**
+ * mnemonic validate.
+ */
+ async function checkMnemonicValid(mnemonic: string) {
+  return mnemonicValidate(mnemonic);
+}
+
+/**
+ * get address and avatar from mnemonic.
+ */
+async function addressFromMnemonic(mnemonic: string, ss58Format: number, cryptoType: KeypairType, derivePath: string) {
+  let keyPair: KeyringPair;
+  try {
+    keyPair = keyring.addFromMnemonic(mnemonic + (derivePath || ""), {}, cryptoType);
+    const address = encodeAddress(keyPair.publicKey, ss58Format);
+    const icons = await account.genIcons([address]);
+    return {
+      address,
+      svg: icons[0][1],
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+/**
+ * get address and avatar from rawSeed.
+ */
+async function addressFromRawSeed(rawSeed: string, ss58Format: number, cryptoType: KeypairType, derivePath: string) {
+  let keyPair: KeyringPair;
+  try {
+    keyPair = keyring.addFromUri(rawSeed + (derivePath || ""), {}, cryptoType);
+    const address = encodeAddress(keyPair.publicKey, ss58Format);
+    const icons = await account.genIcons([address]);
+    return {
+      address,
+      svg: icons[0][1],
+    };
+  } catch (err) {
+    return { error: err.message };
   }
 }
 
 /**
  * Import keyPair from mnemonic, rawSeed or keystore.
  */
-function recover(keyType: string, cryptoType: KeypairType, key: string, password: string) {
+ function recover(keyType: string, cryptoType: KeypairType, key: string, password: string) {
   return new Promise((resolve, reject) => {
-    let keyPair: KeyringPair
-    let mnemonic = ""
-    let rawSeed = ""
+    let keyPair: KeyringPair;
+    let mnemonic = "";
+    let rawSeed = "";
     try {
       switch (keyType) {
         case "mnemonic":
-          keyPair = keyring.addFromMnemonic(key, {}, cryptoType)
-          mnemonic = key
-          break
+          if (!mnemonicValidate(key.split("/")[0])) {
+            throw new Error(`invalid mnemonic ${key}`);
+          }
+          keyPair = keyring.addFromMnemonic(key, {}, cryptoType);
+          mnemonic = key;
+          break;
         case "rawSeed":
-          keyPair = keyring.addFromUri(key, {}, cryptoType)
-          rawSeed = key
-          break
+          keyPair = keyring.addFromUri(key, {}, cryptoType);
+          rawSeed = key;
+          break;
         case "keystore":
-          const keystore = JSON.parse(key)
-          keyPair = keyring.addFromJson(keystore)
+          const keystore = JSON.parse(key);
+          keyPair = keyring.addFromJson(keystore);
           try {
-            keyPair.decodePkcs8(password)
+            keyPair.decodePkcs8(password);
           } catch (err) {
-            resolve(null)
+            resolve(null);
           }
           resolve({
             pubKey: u8aToHex(keyPair.publicKey),
             ...keyPair.toJson(password),
-          })
-          break
+          });
+          break;
       }
     } catch (err) {
-      resolve({ error: err.message })
+      resolve({ error: err.message });
     }
     if (keyPair.address) {
-      const json = keyPair.toJson(password)
-      keyPair.lock()
+      const json = keyPair.toJson(password);
+      keyPair.lock();
       // try add to keyring again to avoid no encrypted data bug
-      keyring.addFromJson(json)
+      keyring.addFromJson(json);
       resolve({
         pubKey: u8aToHex(keyPair.publicKey),
         mnemonic,
         rawSeed,
         ...json,
-      })
+      });
     } else {
-      resolve(null)
+      resolve(null);
     }
-  })
+  });
 }
 
 /**
@@ -438,4 +492,7 @@ export default {
   signTxAsExtension,
   signBytesAsExtension,
   verifySignature,
+  checkMnemonicValid,
+  addressFromMnemonic,
+  addressFromRawSeed
 }

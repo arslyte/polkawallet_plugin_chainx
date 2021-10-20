@@ -60,7 +60,7 @@ class PluginChainX extends PolkawalletPlugin {
           jsCodeVersion: 11301,
           isTestNet: false,
         ),
-        recoveryEnabled = true,
+        recoveryEnabled = false,
         _cache = StoreCacheChainX();
 
   @override

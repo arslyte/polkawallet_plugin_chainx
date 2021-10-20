@@ -6,7 +6,7 @@ import {
   DeriveStakingWaiting
 } from "@polkadot/api-derive/types";
 import type { Option, StorageKey } from '@polkadot/types';
-import { u8aConcat, u8aToHex, BN_ZERO, BN_MILLION, BN_ONE, formatBalance, isFunction, arrayFlatten } from '@polkadot/util';
+import { u8aConcat, u8aToHex, BN_ZERO, BN_MILLION,stringToU8a, BN_ONE, formatBalance, isFunction, arrayFlatten } from '@polkadot/util';
 import {  Nominations } from "@polkadot/types/interfaces";
 import BN from "bn.js";
 import { Nomination, UserInterest } from './types';
@@ -652,8 +652,8 @@ function _extractStakerState(
     !(Array.isArray(validateInfo)
       ? validateInfo[1].isEmpty
       : validateInfo.isEmpty) || !!allStashes?.includes(stashId);
-  const nextConcat = u8aConcat(...nextSessionIds.map((id: any) => id.toU8a()));
-  const currConcat = u8aConcat(...sessionIds.map((id: any) => id.toU8a()));
+  const nextConcat = u8aConcat(...nextSessionIds.map((id: any) =>  stringToU8a(_toIdString(id))));
+  const currConcat = u8aConcat(...sessionIds.map((id: any) => stringToU8a(_toIdString(id))));
   const controllerId = _toIdString(_controllerId);
 
   return {

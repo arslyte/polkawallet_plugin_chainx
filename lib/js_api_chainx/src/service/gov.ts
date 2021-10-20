@@ -164,7 +164,7 @@ async function getTreasuryOverview(api: ApiPromise) {
     forceUnit: "-",
     withSi: false,
   }).split(".")[0]
-  console.log(res)
+  //console.log(res)
   res.proposals.forEach((e: any) => {
     if (e.council.length) {
       e.council = e.council.map((i: any) => ({

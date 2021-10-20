@@ -80,7 +80,7 @@ async function queryAddressWithAccountIndex(api: ApiPromise, accIndex: string, s
  * get staking stash/controller relationship of accounts
  */
 async function queryAccountsBonded(api: ApiPromise, pubKeys: string[]) {
-  console.log("queryAccountsBonded", api.query)
+  //console.log("queryAccountsBonded", api.query)
   return Promise.all(pubKeys.map((key) => keyring.encodeAddress(hexToU8a(key), 44)).map((i) => Promise.all([api.query.staking.bonded(i), api.query.staking.ledger(i)]))).then((ls) =>
     ls.map((i, index) => [pubKeys[index], i[0], i[1].toHuman() ? i[1].toHuman()["stash"] : null])
   )

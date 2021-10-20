@@ -7,7 +7,7 @@ const node_list_chainx = [
   {
     'name': 'ChainX (Elena Node)',
     'ss58': 44,
-    'endpoint': 'wss://chainx.elara.patract.io',
+    'endpoint': 'wss://pub.elara.patract.io/chainx',
   },
   {
     'name': 'ChainX (Overseas Node)',
